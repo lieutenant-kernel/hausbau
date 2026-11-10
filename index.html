@@ -1,0 +1,903 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kostenrahmen Eigenheim</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+/* Layout: ein Planblatt. Oben ein Schriftfeld wie auf einer Bauzeichnung, darunter links die Eingaben,
+   rechts die mitlaufende Kostenaufstellung nach DIN 276 (Kostengruppen 100–800). */
+:root {
+  --paper: #E8EBE7;        /* Betongrau, leicht grünlich */
+  --sheet: #F9FAF8;        /* Planpapier */
+  --ink: #141917;          /* Tusche */
+  --muted: #56605B;
+  --line: #C2C9C3;
+  --line-soft: #D9DED9;
+  --accent: #2236C4;       /* Pausblau */
+  --accent-soft: #DFE3F8;
+  --on-accent: #FFFFFF;
+  --risk: #8E9691;
+
+  --kg1: #2a78d6; --kg2: #eb6834; --kg3: #1baf7a; --kg4: #eda100;
+  --kg5: #e87ba4; --kg6: #008300; --kg7: #6250d6; --kg8: #e34948;
+
+  --good: #0B7A0B; --good-bg: #E1F2E1;
+  --warn: #8A5A00; --warn-bg: #FBEFD2;
+  --crit: #B02A2A; --crit-bg: #F8E1E1;
+
+  --f-display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --t-xs: 11px; --t-sm: 13px; --t-md: 15px; --t-lg: 19px; --t-xl: 26px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #101312; --sheet: #181C1A; --ink: #E7ECE8; --muted: #9AA49F;
+    --line: #333B37; --line-soft: #262C29; --accent: #8E9CFF; --accent-soft: #252B52; --on-accent: #0D1030;
+    --risk: #6F7772;
+    --kg1: #3987e5; --kg2: #d95926; --kg3: #199e70; --kg4: #c98500;
+    --kg5: #d55181; --kg6: #008300; --kg7: #9085e9; --kg8: #e66767;
+    --good: #5FD35F; --good-bg: #173018; --warn: #F2B947; --warn-bg: #3A2C0D; --crit: #F08080; --crit-bg: #3D1717;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #101312; --sheet: #181C1A; --ink: #E7ECE8; --muted: #9AA49F;
+  --line: #333B37; --line-soft: #262C29; --accent: #8E9CFF; --accent-soft: #252B52; --on-accent: #0D1030;
+  --risk: #6F7772;
+  --kg1: #3987e5; --kg2: #d95926; --kg3: #199e70; --kg4: #c98500;
+  --kg5: #d55181; --kg6: #008300; --kg7: #9085e9; --kg8: #e66767;
+  --good: #5FD35F; --good-bg: #173018; --warn: #F2B947; --warn-bg: #3A2C0D; --crit: #F08080; --crit-bg: #3D1717;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: var(--t-md);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.blatt {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+  display: grid;
+  gap: 28px;
+}
+h1, h2, h3 { margin: 0; text-wrap: balance; font-family: var(--f-display); }
+.label {
+  font-family: var(--f-mono);
+  font-size: var(--t-xs);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- Schriftfeld ---------- */
+.schriftfeld {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) repeat(3, minmax(0, 1fr));
+  border: 1.5px solid var(--ink);
+  background: var(--sheet);
+}
+.schriftfeld > div {
+  padding: 12px 16px;
+  border-right: 1px solid var(--line);
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-width: 0;
+}
+.schriftfeld > div:last-child { border-right: 0; }
+.schriftfeld h1 {
+  font-size: clamp(28px, 4.2vw, 44px);
+  font-weight: 750;
+  font-stretch: 118%;
+  font-variation-settings: "wdth" 118;
+  line-height: 1;
+  letter-spacing: -.01em;
+}
+.schriftfeld .wert { font-size: var(--t-md); font-weight: 600; overflow-wrap: anywhere; }
+.schriftfeld p { margin: 6px 0 0; color: var(--muted); font-size: var(--t-sm); max-width: 60ch; }
+@media (max-width: 760px) {
+  .schriftfeld { grid-template-columns: 1fr 1fr; }
+  .schriftfeld > div:first-child { grid-column: 1 / -1; border-right: 0; border-bottom: 1px solid var(--line); }
+  .schriftfeld > div:nth-child(2) { border-bottom: 1px solid var(--line); }
+  .schriftfeld > div:nth-child(3) { border-right: 0; border-bottom: 1px solid var(--line); }
+  .schriftfeld > div:nth-child(4) { grid-column: 1 / -1; border-right: 0; }
+}
+
+/* ---------- Plan: zwei Spalten ---------- */
+.plan {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 460px);
+  gap: 32px;
+  align-items: start;
+}
+@media (max-width: 940px) { .plan { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Eingaben ---------- */
+form { display: grid; gap: 28px; }
+.gruppe { display: grid; gap: 18px; border-top: 1.5px solid var(--ink); padding-top: 14px; }
+.gruppe-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.gruppe h2 {
+  font-size: var(--t-lg);
+  font-weight: 700;
+  font-variation-settings: "wdth" 112;
+  letter-spacing: .01em;
+}
+.felder { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; }
+.feld { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.feld > label, .feld > .titel { font-size: var(--t-sm); font-weight: 600; }
+.hinweis { font-size: 12px; color: var(--muted); }
+.eingabe {
+  display: flex;
+  align-items: stretch;
+  background: var(--sheet);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+.eingabe:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.eingabe input, .eingabe select {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 500 var(--t-md)/1.2 var(--f-mono);
+  font-variant-numeric: tabular-nums;
+  padding: 10px 12px;
+  outline: none;
+}
+.eingabe select { font-family: var(--f-body); cursor: pointer; }
+.eingabe .einheit {
+  display: flex; align-items: center;
+  padding: 0 12px;
+  font-family: var(--f-mono);
+  font-size: var(--t-sm);
+  color: var(--muted);
+  border-left: 1px solid var(--line-soft);
+}
+
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 8px; }
+legend { padding: 0; font-size: var(--t-sm); font-weight: 600; margin-bottom: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { position: relative; flex: 1 1 auto; }
+.chip input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.chip span {
+  display: grid;
+  gap: 1px;
+  padding: 8px 12px;
+  text-align: center;
+  background: var(--sheet);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.chip small { font-family: var(--f-mono); font-size: 11px; color: var(--muted); font-weight: 400; }
+.chip:hover span { border-color: var(--accent); }
+.chip input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.chip input:checked + span small { color: var(--on-accent); opacity: .8; }
+.chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.schalter { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; cursor: pointer; }
+.schalter input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--accent); flex: none; cursor: pointer; }
+.schalter-reihe { display: flex; flex-wrap: wrap; gap: 10px 28px; }
+
+.fusszeile { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+button {
+  font: 600 var(--t-sm)/1 var(--f-body);
+  padding: 10px 14px;
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: 3px;
+  cursor: pointer;
+}
+button:hover { background: var(--ink); color: var(--sheet); }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- Aufstellung ---------- */
+.aufstellung {
+  position: sticky;
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  background: var(--sheet);
+  border: 1.5px solid var(--ink);
+  display: grid;
+  scroll-margin-top: 16px;
+}
+@media (max-width: 940px) { .aufstellung { position: static; max-height: none; } }
+.block { padding: 18px 20px; display: grid; gap: 12px; border-bottom: 1px solid var(--line); }
+.block:last-child { border-bottom: 0; }
+.summe {
+  font-family: var(--f-display);
+  font-size: clamp(38px, 5vw, 52px);
+  font-weight: 800;
+  font-variation-settings: "wdth" 108;
+  line-height: 1;
+  letter-spacing: -.015em;
+}
+.kennzahlen { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.kennzahl { display: grid; gap: 2px; }
+.kennzahl b { font-family: var(--f-mono); font-weight: 500; font-size: var(--t-md); font-variant-numeric: tabular-nums; }
+
+.balken { display: flex; gap: 2px; height: 22px; }
+.balken > div { min-width: 2px; height: 100%; cursor: default; transition: opacity .15s; }
+.balken > div:first-child { border-radius: 4px 0 0 4px; }
+.balken > div:last-child { border-radius: 0 4px 4px 0; }
+.balken.hover > div:not(.aktiv) { opacity: .35; }
+.risiko-muster { background: repeating-linear-gradient(45deg, var(--risk) 0 3px, transparent 3px 6px); box-shadow: inset 0 0 0 1px var(--risk); }
+
+.kg-liste { display: grid; }
+.kg { border-top: 1px solid var(--line-soft); }
+.kg:first-child { border-top: 0; }
+.kg summary {
+  list-style: none;
+  display: grid;
+  grid-template-columns: 12px 44px minmax(0, 1fr) auto 46px 14px;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.kg summary::-webkit-details-marker { display: none; }
+.kg summary:hover, .kg.aktiv summary { background: var(--paper); }
+.swatch { width: 12px; height: 12px; border-radius: 2px; }
+.kg-nr { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+.kg-name { font-weight: 500; overflow-wrap: anywhere; }
+.kg-betrag { font-family: var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.kg-anteil { font-family: var(--f-mono); font-size: 12px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.pfeil { width: 14px; height: 14px; color: var(--muted); transition: transform .15s; }
+.kg[open] .pfeil { transform: rotate(90deg); }
+.kg ul { list-style: none; margin: 0; padding: 2px 4px 12px 72px; display: grid; gap: 4px; }
+.kg li { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--muted); }
+.kg li span:last-child { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 420px) {
+  .kg summary { grid-template-columns: 12px 36px minmax(0, 1fr) auto 14px; }
+  .kg-anteil { display: none; }
+  .kg ul { padding-left: 24px; }
+}
+
+.zeilen { display: grid; gap: 8px; }
+.zeile { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 14px; }
+.zeile b { font-family: var(--f-mono); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.zeile.gross { font-size: var(--t-md); font-weight: 600; }
+.zeile.gross b { font-size: var(--t-lg); }
+.status {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 9px 3px 7px;
+  border-radius: 99px;
+  font-size: 12px; font-weight: 600;
+  width: fit-content;
+}
+.status svg { width: 12px; height: 12px; flex: none; }
+.status.good { background: var(--good-bg); color: var(--good); }
+.status.warn { background: var(--warn-bg); color: var(--warn); }
+.status.crit { background: var(--crit-bg); color: var(--crit); }
+
+.annahmen { border-top: 1.5px solid var(--ink); padding-top: 14px; }
+.annahmen summary { cursor: pointer; font-family: var(--f-display); font-weight: 700; font-size: var(--t-lg); font-variation-settings: "wdth" 112; }
+.annahmen-inhalt { display: grid; gap: 16px; padding-top: 14px; font-size: 14px; color: var(--muted); }
+.annahmen-inhalt p { margin: 0; max-width: 68ch; }
+.tabelle-wrap { overflow-x: auto; }
+.annahmen table { border-collapse: collapse; font-size: 13px; min-width: 420px; }
+.annahmen th, .annahmen td { text-align: left; padding: 6px 14px 6px 0; border-bottom: 1px solid var(--line-soft); }
+.annahmen th { font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; font-weight: 500; }
+.annahmen td.num { text-align: right; font-family: var(--f-mono); }
+
+.tip {
+  position: fixed;
+  z-index: 20;
+  pointer-events: none;
+  background: var(--ink);
+  color: var(--sheet);
+  padding: 8px 10px;
+  border-radius: 3px;
+  font-size: 13px;
+  display: grid;
+  gap: 2px;
+  max-width: 260px;
+}
+.tip b { font-family: var(--f-mono); font-weight: 500; }
+
+/* Mobile Leiste */
+.leiste { display: none; }
+@media (max-width: 940px) {
+  .blatt { padding-bottom: 110px; }
+  .leiste {
+    display: flex;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 15;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    background: var(--sheet);
+    border-top: 1.5px solid var(--ink);
+  }
+  .leiste .wert { font-family: var(--f-display); font-weight: 800; font-size: 22px; font-variation-settings: "wdth" 108; line-height: 1.1; }
+  .leiste a { color: var(--accent); font-weight: 600; font-size: 14px; white-space: nowrap; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+</head>
+<body>
+<div class="blatt">
+  <header class="schriftfeld">
+    <div>
+      <span class="label">Kostenrahmen nach DIN 276</span>
+      <h1>Kostenrahmen Eigenheim</h1>
+      <p>Schätze die Gesamtkosten deines Hausbaus vom Grundstück bis zur Finanzierung. Alle Felder sind mit Beispielwerten gefüllt. Passe sie an dein Vorhaben an.</p>
+    </div>
+    <div><span class="label">Projekt</span><span class="wert" id="sf-projekt">–</span></div>
+    <div><span class="label">Bauort</span><span class="wert" id="sf-ort">–</span></div>
+    <div><span class="label">Stand</span><span class="wert num" id="sf-stand">–</span></div>
+  </header>
+
+  <main class="plan">
+    <form id="rechner" autocomplete="off">
+      <section class="gruppe" aria-labelledby="h-grund">
+        <div class="gruppe-kopf"><h2 id="h-grund">Grundstück</h2><span class="label">KG 100 · 200</span></div>
+        <div class="felder">
+          <div class="feld">
+            <label for="land">Bundesland</label>
+            <div class="eingabe">
+              <select id="land" name="land">
+                <option value="BW">Baden-Württemberg</option>
+                <option value="BY">Bayern</option>
+                <option value="BE">Berlin</option>
+                <option value="BB">Brandenburg</option>
+                <option value="HB">Bremen</option>
+                <option value="HH">Hamburg</option>
+                <option value="HE">Hessen</option>
+                <option value="MV">Mecklenburg-Vorpommern</option>
+                <option value="NI">Niedersachsen</option>
+                <option value="NW">Nordrhein-Westfalen</option>
+                <option value="RP">Rheinland-Pfalz</option>
+                <option value="SL">Saarland</option>
+                <option value="SN">Sachsen</option>
+                <option value="ST">Sachsen-Anhalt</option>
+                <option value="SH">Schleswig-Holstein</option>
+                <option value="TH">Thüringen</option>
+              </select>
+            </div>
+            <span class="hinweis" id="land-hinweis">–</span>
+          </div>
+          <div class="feld">
+            <label for="gs">Grundstücksfläche</label>
+            <div class="eingabe"><input id="gs" name="gs" type="number" min="50" max="10000" step="10" inputmode="numeric"><span class="einheit">m²</span></div>
+          </div>
+          <div class="feld">
+            <label for="brw">Bodenpreis</label>
+            <div class="eingabe"><input id="brw" name="brw" type="number" min="0" max="5000" step="5" inputmode="numeric"><span class="einheit">€/m²</span></div>
+            <span class="hinweis">Bodenrichtwert oder Angebotspreis</span>
+          </div>
+          <div class="feld">
+            <label for="makler">Maklerprovision</label>
+            <div class="eingabe"><input id="makler" name="makler" type="number" min="0" max="10" step="0.01" inputmode="decimal"><span class="einheit">%</span></div>
+            <span class="hinweis">0 bei Kauf ohne Makler</span>
+          </div>
+        </div>
+        <div class="schalter-reihe">
+          <label class="schalter"><input type="checkbox" id="vorhanden" name="vorhanden"> Grundstück ist schon vorhanden</label>
+          <label class="schalter"><input type="checkbox" id="erschlossen" name="erschlossen"> Grundstück ist erschlossen</label>
+        </div>
+      </section>
+
+      <section class="gruppe" aria-labelledby="h-haus">
+        <div class="gruppe-kopf"><h2 id="h-haus">Haus</h2><span class="label">KG 300 · 400</span></div>
+        <div class="felder">
+          <div class="feld">
+            <label for="wf">Wohnfläche</label>
+            <div class="eingabe"><input id="wf" name="wf" type="number" min="40" max="600" step="5" inputmode="numeric"><span class="einheit">m²</span></div>
+            <span class="hinweis">nach Wohnflächenverordnung</span>
+          </div>
+        </div>
+        <fieldset>
+          <legend>Haustyp</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="haus" id="haus-efh" value="efh"><span>Einfamilienhaus</span></label>
+            <label class="chip"><input type="radio" name="haus" id="haus-dhh" value="dhh"><span>Doppelhaushälfte</span></label>
+            <label class="chip"><input type="radio" name="haus" id="haus-rh" value="rh"><span>Reihenhaus</span></label>
+            <label class="chip"><input type="radio" name="haus" id="haus-bung" value="bung"><span>Bungalow</span></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Bauweise</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="bauweise" id="bw-massiv" value="massiv"><span>Massivbau</span></label>
+            <label class="chip"><input type="radio" name="bauweise" id="bw-holz" value="holz"><span>Holzbau</span></label>
+            <label class="chip"><input type="radio" name="bauweise" id="bw-fertig" value="fertig"><span>Fertighaus</span></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Ausstattung</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="ausst" id="au-einfach" value="einfach"><span>Einfach<small>2.300 €/m²</small></span></label>
+            <label class="chip"><input type="radio" name="ausst" id="au-mittel" value="mittel"><span>Mittel<small>2.850 €/m²</small></span></label>
+            <label class="chip"><input type="radio" name="ausst" id="au-gehoben" value="gehoben"><span>Gehoben<small>3.500 €/m²</small></span></label>
+            <label class="chip"><input type="radio" name="ausst" id="au-exklusiv" value="exklusiv"><span>Exklusiv<small>4.400 €/m²</small></span></label>
+          </div>
+          <span class="hinweis">Baukosten KG 300 + 400 je m² Wohnfläche, Bundesdurchschnitt vor Regionalfaktor</span>
+        </fieldset>
+        <fieldset>
+          <legend>Energiestandard</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="energie" id="en-geg" value="geg"><span>GEG-Standard</span></label>
+            <label class="chip"><input type="radio" name="energie" id="en-eh55" value="eh55"><span>Effizienzhaus 55</span></label>
+            <label class="chip"><input type="radio" name="energie" id="en-eh40" value="eh40"><span>Effizienzhaus 40</span></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Gründung</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="keller" id="ke-platte" value="platte"><span>Bodenplatte</span></label>
+            <label class="chip"><input type="radio" name="keller" id="ke-teil" value="teil"><span>Teilkeller</span></label>
+            <label class="chip"><input type="radio" name="keller" id="ke-voll" value="voll"><span>Vollkeller</span></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Garage</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="garage" id="ga-keine" value="keine"><span>Keine</span></label>
+            <label class="chip"><input type="radio" name="garage" id="ga-carport" value="carport"><span>Carport</span></label>
+            <label class="chip"><input type="radio" name="garage" id="ga-einzel" value="einzel"><span>Einzelgarage</span></label>
+            <label class="chip"><input type="radio" name="garage" id="ga-doppel" value="doppel"><span>Doppelgarage</span></label>
+          </div>
+        </fieldset>
+      </section>
+
+      <section class="gruppe" aria-labelledby="h-aussen">
+        <div class="gruppe-kopf"><h2 id="h-aussen">Außenanlagen und Ausstattung</h2><span class="label">KG 500 · 600</span></div>
+        <fieldset>
+          <legend>Garten, Wege und Terrasse</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="aussen" id="aa-einfach" value="einfach"><span>Einfach<small>45 €/m²</small></span></label>
+            <label class="chip"><input type="radio" name="aussen" id="aa-mittel" value="mittel"><span>Mittel<small>85 €/m²</small></span></label>
+            <label class="chip"><input type="radio" name="aussen" id="aa-gehoben" value="gehoben"><span>Gehoben<small>150 €/m²</small></span></label>
+          </div>
+          <span class="hinweis">je m² unbebauter Grundstücksfläche</span>
+        </fieldset>
+        <div class="felder">
+          <div class="feld">
+            <label for="kueche">Einbauküche</label>
+            <div class="eingabe"><input id="kueche" name="kueche" type="number" min="0" max="200000" step="500" inputmode="numeric"><span class="einheit">€</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="gruppe" aria-labelledby="h-planung">
+        <div class="gruppe-kopf"><h2 id="h-planung">Planung und Reserve</h2><span class="label">KG 700</span></div>
+        <fieldset>
+          <legend>Wer plant und baut?</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="planung" id="pl-architekt" value="architekt"><span>Architekt<small>17 % Honorar</small></span></label>
+            <label class="chip"><input type="radio" name="planung" id="pl-gu" value="gu"><span>Generalunternehmer<small>7 %</small></span></label>
+            <label class="chip"><input type="radio" name="planung" id="pl-fertig" value="fertig"><span>Fertighausanbieter<small>5 %</small></span></label>
+          </div>
+          <span class="hinweis">Anteil an den Baukosten KG 300 + 400 für Entwurf, Statik, Bauantrag und Bauleitung</span>
+        </fieldset>
+        <div class="felder">
+          <div class="feld">
+            <label for="puffer">Risikobetrag</label>
+            <div class="eingabe"><input id="puffer" name="puffer" type="number" min="0" max="40" step="1" inputmode="numeric"><span class="einheit">%</span></div>
+            <span class="hinweis">Reserve auf KG 200–700, üblich sind 10 bis 15 %</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="gruppe" aria-labelledby="h-finanz">
+        <div class="gruppe-kopf"><h2 id="h-finanz">Finanzierung</h2><span class="label">KG 800</span></div>
+        <div class="felder">
+          <div class="feld">
+            <label for="ek">Eigenkapital</label>
+            <div class="eingabe"><input id="ek" name="ek" type="number" min="0" max="5000000" step="1000" inputmode="numeric"><span class="einheit">€</span></div>
+          </div>
+          <div class="feld">
+            <label for="zins">Sollzins</label>
+            <div class="eingabe"><input id="zins" name="zins" type="number" min="0" max="15" step="0.05" inputmode="decimal"><span class="einheit">% p. a.</span></div>
+          </div>
+          <div class="feld">
+            <label for="tilg">Anfängliche Tilgung</label>
+            <div class="eingabe"><input id="tilg" name="tilg" type="number" min="0.5" max="10" step="0.1" inputmode="decimal"><span class="einheit">% p. a.</span></div>
+          </div>
+          <div class="feld">
+            <label for="bindung">Zinsbindung</label>
+            <div class="eingabe">
+              <select id="bindung" name="bindung">
+                <option value="5">5 Jahre</option>
+                <option value="10">10 Jahre</option>
+                <option value="15">15 Jahre</option>
+                <option value="20">20 Jahre</option>
+                <option value="25">25 Jahre</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="fusszeile">
+        <span class="hinweis">Deine Eingaben bleiben in diesem Browser gespeichert.</span>
+        <button type="button" id="reset">Auf Beispielwerte zurücksetzen</button>
+      </div>
+
+      <details class="annahmen">
+        <summary>Annahmen und Rechenweg</summary>
+        <div class="annahmen-inhalt">
+          <p>Der Rechner liefert einen Kostenrahmen für die erste Planung. Er ersetzt kein Angebot und keine Kostenschätzung durch Architektin, Architekt oder Bauunternehmen. Alle Werte sind Richtwerte mit Preisstand 2026 und brutto inklusive 19 % Umsatzsteuer.</p>
+          <p><strong>Baukosten (KG 300 + 400):</strong> Wohnfläche × Grundpreis der Ausstattung × Faktor für Haustyp, Bauweise und Energiestandard × Regionalfaktor des Bundeslands. Davon entfallen 74 % auf die Baukonstruktion und 26 % auf die technischen Anlagen. Keller werden mit 1.300 €/m² Grundfläche angesetzt.</p>
+          <p><strong>Grundstück (KG 100):</strong> Kaufpreis plus Grunderwerbsteuer des Bundeslands, 2 % für Notar und Grundbuch sowie die Maklerprovision.</p>
+          <p><strong>Finanzierung (KG 800):</strong> 0,5 % des Darlehens für die Grundschuld, Bauzeitzinsen für 12 Monate bei durchschnittlich halb abgerufenem Darlehen und 0,5 % Bereitstellungszinsen. Die Monatsrate ist eine Annuität aus Sollzins und anfänglicher Tilgung.</p>
+          <div class="tabelle-wrap">
+            <table>
+              <thead><tr><th>Bundesland</th><th>Grunderwerbsteuer</th><th>Regionalfaktor</th></tr></thead>
+              <tbody id="annahmen-laender"></tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+    </form>
+
+    <aside class="aufstellung" id="aufstellung" aria-label="Kostenaufstellung">
+      <div class="block">
+        <span class="label">Gesamtkosten inkl. Grundstück</span>
+        <div class="summe num" id="gesamt">–</div>
+        <div class="kennzahlen">
+          <div class="kennzahl"><span class="label">Baukosten je m² Wfl.</span><b id="k-bau-m2">–</b></div>
+          <div class="kennzahl"><span class="label">Gesamt je m² Wfl.</span><b id="k-ges-m2">–</b></div>
+        </div>
+      </div>
+      <div class="block">
+        <div class="balken" id="balken" role="img" aria-label="Anteile der Kostengruppen an den Gesamtkosten"></div>
+        <div class="kg-liste" id="kg-liste"></div>
+      </div>
+      <div class="block">
+        <div class="gruppe-kopf"><span class="label">Finanzierung</span><span id="ek-status"></span></div>
+        <div class="zeilen">
+          <div class="zeile"><span>Eigenkapital</span><b id="f-ek">–</b></div>
+          <div class="zeile"><span>Darlehensbetrag</span><b id="f-darlehen">–</b></div>
+          <div class="zeile gross"><span>Monatsrate</span><b id="f-rate">–</b></div>
+          <div class="zeile"><span id="f-rest-label">Restschuld nach Zinsbindung</span><b id="f-rest">–</b></div>
+          <div class="zeile"><span>Schuldenfrei nach</span><b id="f-dauer">–</b></div>
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div class="leiste" aria-hidden="false">
+  <div><span class="label">Gesamtkosten</span><div class="wert num" id="l-gesamt">–</div></div>
+  <div style="text-align:right"><span class="label" id="l-rate">–</span><br><a href="#aufstellung">Zur Aufstellung</a></div>
+</div>
+
+<div class="tip" id="tip" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+
+  const LAENDER = {
+    BW: ["Baden-Württemberg", 5.0, 1.07], BY: ["Bayern", 3.5, 1.10], BE: ["Berlin", 6.0, 1.03],
+    BB: ["Brandenburg", 6.5, 0.92], HB: ["Bremen", 5.5, 0.97], HH: ["Hamburg", 5.5, 1.09],
+    HE: ["Hessen", 6.0, 1.04], MV: ["Mecklenburg-Vorpommern", 6.0, 0.92], NI: ["Niedersachsen", 5.0, 0.95],
+    NW: ["Nordrhein-Westfalen", 6.5, 0.99], RP: ["Rheinland-Pfalz", 5.0, 0.98], SL: ["Saarland", 6.5, 0.96],
+    SN: ["Sachsen", 5.5, 0.89], ST: ["Sachsen-Anhalt", 5.0, 0.87], SH: ["Schleswig-Holstein", 6.5, 0.99],
+    TH: ["Thüringen", 5.0, 0.88]
+  };
+  const PREIS = { einfach: 2300, mittel: 2850, gehoben: 3500, exklusiv: 4400 };
+  const HAUS = {
+    efh: { f: 1.00, geschosse: 1.8, n: "Einfamilienhaus" },
+    dhh: { f: 0.96, geschosse: 1.9, n: "Doppelhaushälfte" },
+    rh: { f: 0.92, geschosse: 2.0, n: "Reihenhaus" },
+    bung: { f: 1.10, geschosse: 1.0, n: "Bungalow" }
+  };
+  const BAUWEISE = { massiv: 1.00, holz: 1.03, fertig: 0.95 };
+  const ENERGIE = { geg: 1.00, eh55: 1.04, eh40: 1.08 };
+  const KELLER = { platte: [0, ""], teil: [0.5, "Teilkeller"], voll: [1, "Vollkeller"] };
+  const GARAGE = { keine: [0, 0, ""], carport: [9000, 18, "Carport"], einzel: [22000, 21, "Einzelgarage"], doppel: [38000, 36, "Doppelgarage"] };
+  const AUSSEN = { einfach: 45, mittel: 85, gehoben: 150 };
+  const PLANUNG = {
+    architekt: [0.17, "Architekt und Fachplaner (HOAI)"],
+    gu: [0.07, "Planung über Generalunternehmer"],
+    fertig: [0.05, "Planung durch Fertighausanbieter"]
+  };
+
+  const BEISPIEL = {
+    land: "NW", gs: 500, brw: 280, makler: 3.57, vorhanden: false, erschlossen: true,
+    wf: 140, haus: "efh", bauweise: "massiv", ausst: "mittel", energie: "eh55", keller: "platte", garage: "carport",
+    aussen: "mittel", kueche: 15000, planung: "gu", puffer: 10,
+    ek: 120000, zins: 3.6, tilg: 2, bindung: "15"
+  };
+
+  const KG_NAMEN = {
+    100: "Grundstück", 200: "Herrichten und Erschließen", 300: "Bauwerk – Baukonstruktion",
+    400: "Bauwerk – Technische Anlagen", 500: "Außenanlagen", 600: "Ausstattung",
+    700: "Baunebenkosten", 800: "Finanzierung"
+  };
+
+  const eur = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+  const pct = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+  const zahl = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 });
+  const $ = (id) => document.getElementById(id);
+  const form = $("rechner");
+  const SPEICHER = "kostenrahmen-eigenheim-v1";
+
+  function num(v, fallback) {
+    const n = parseFloat(String(v).replace(",", "."));
+    return Number.isFinite(n) ? Math.max(0, n) : fallback;
+  }
+
+  function lesen() {
+    const f = form.elements;
+    const radio = (name) => (form.querySelector(`input[name="${name}"]:checked`) || {}).value || BEISPIEL[name];
+    return {
+      land: f.land.value, gs: num(f.gs.value, 0), brw: num(f.brw.value, 0), makler: num(f.makler.value, 0),
+      vorhanden: f.vorhanden.checked, erschlossen: f.erschlossen.checked,
+      wf: num(f.wf.value, 0), haus: radio("haus"), bauweise: radio("bauweise"), ausst: radio("ausst"),
+      energie: radio("energie"), keller: radio("keller"), garage: radio("garage"), aussen: radio("aussen"),
+      kueche: num(f.kueche.value, 0), planung: radio("planung"), puffer: num(f.puffer.value, 0),
+      ek: num(f.ek.value, 0), zins: num(f.zins.value, 0), tilg: num(f.tilg.value, 0), bindung: f.bindung.value
+    };
+  }
+
+  function schreiben(s) {
+    const f = form.elements;
+    ["land", "gs", "brw", "makler", "wf", "kueche", "puffer", "ek", "zins", "tilg", "bindung"].forEach((k) => { f[k].value = s[k]; });
+    f.vorhanden.checked = !!s.vorhanden;
+    f.erschlossen.checked = !!s.erschlossen;
+    ["haus", "bauweise", "ausst", "energie", "keller", "garage", "aussen", "planung"].forEach((k) => {
+      const el = form.querySelector(`input[name="${k}"][value="${s[k]}"]`);
+      if (el) el.checked = true;
+    });
+  }
+
+  // Reine Rechenfunktion: Eingaben -> Kostengruppen und Finanzierung
+  function berechne(s) {
+    const [, grest, regio] = LAENDER[s.land] || LAENDER.NW;
+    const haus = HAUS[s.haus];
+    const grundflaeche = s.wf / haus.geschosse * 1.2; // überbaute Fläche inkl. Außenwände
+    const bauwerk = s.wf * PREIS[s.ausst] * haus.f * BAUWEISE[s.bauweise] * ENERGIE[s.energie] * regio;
+    const g = GARAGE[s.garage];
+    const k = KELLER[s.keller];
+
+    const kg = {};
+    const land = s.vorhanden ? 0 : s.gs * s.brw;
+    kg[100] = s.vorhanden
+      ? [["Grundstück bereits vorhanden", 0]]
+      : [["Kaufpreis Grundstück", land], [`Grunderwerbsteuer ${zahl.format(grest)} %`, land * grest / 100],
+         ["Notar und Grundbuch 2 %", land * 0.02], [`Maklerprovision ${zahl.format(s.makler)} %`, land * s.makler / 100]];
+    kg[200] = [["Baufeld herrichten, Absteckung", 2500 * regio],
+               ["Hausanschlüsse Wasser, Abwasser, Strom, Telekom", 15000 * regio],
+               ["Erschließungsbeiträge der Gemeinde", s.erschlossen ? 0 : s.gs * 30]];
+    kg[300] = [["Rohbau, Dach, Fenster, Innenausbau", bauwerk * 0.74],
+               [k[1], grundflaeche * k[0] * 1300 * regio],
+               [g[2], g[0] * regio]];
+    kg[400] = [["Heizung, Lüftung, Sanitär, Elektro", bauwerk * 0.26]];
+    const frei = Math.max(s.gs - grundflaeche - g[1], 0);
+    kg[500] = [[`Garten, Wege, Terrasse (${zahl.format(Math.round(frei))} m²)`, frei * AUSSEN[s.aussen] * regio]];
+    kg[600] = [["Einbauküche", s.kueche]];
+    const kg34 = sum(kg[300]) + sum(kg[400]);
+    const pl = PLANUNG[s.planung];
+    kg[700] = [[`${pl[1]} ${zahl.format(pl[0] * 100)} %`, kg34 * pl[0]],
+               ["Baugenehmigung und Prüfstatik", kg34 * 0.005],
+               ["Vermessung und Einmessung", 3500],
+               ["Bodengutachten", 1800],
+               ["Bauherren-Versicherungen", kg34 * 0.003],
+               ["Energieberatung und Effizienznachweis", s.energie === "geg" ? 0 : 2500]];
+
+    let basis = 0;
+    for (let n = 200; n <= 700; n += 100) basis += sum(kg[n]);
+    const risiko = basis * s.puffer / 100;
+    const zwischensumme = sum(kg[100]) + basis + risiko;
+
+    const darlehen0 = Math.max(zwischensumme - s.ek, 0);
+    kg[800] = [["Grundschuldbestellung 0,5 %", darlehen0 * 0.005],
+               ["Bauzeitzinsen, 12 Monate", darlehen0 * s.zins / 100 * 0.5],
+               ["Bereitstellungszinsen", darlehen0 * 0.005]];
+
+    for (const n in kg) kg[n] = kg[n].filter(([label, v]) => label && (v > 0 || n === "100"));
+
+    const gesamt = zwischensumme + sum(kg[800]);
+    const darlehen = Math.max(gesamt - s.ek, 0);
+    const i = s.zins / 1200;
+    const rate = darlehen * (s.zins + s.tilg) / 1200;
+    const monate = Number(s.bindung) * 12;
+    let rest, laufzeit;
+    if (darlehen === 0 || rate === 0) { rest = 0; laufzeit = 0; }
+    else if (i === 0) { rest = Math.max(darlehen - rate * monate, 0); laufzeit = darlehen / rate; }
+    else {
+      const q = Math.pow(1 + i, monate);
+      rest = Math.max(darlehen * q - rate * (q - 1) / i, 0);
+      laufzeit = rate > darlehen * i ? -Math.log(1 - i * darlehen / rate) / Math.log(1 + i) : Infinity;
+    }
+
+    return {
+      kg, risiko, gesamt, kg34, wf: s.wf, darlehen, rate, rest, laufzeit,
+      ek: Math.min(s.ek, gesamt), ekQuote: gesamt > 0 ? s.ek / gesamt : 0
+    };
+  }
+
+  function sum(items) { return items.reduce((a, [, v]) => a + v, 0); }
+
+  // ---------- Aufbau der Aufstellung ----------
+  const liste = $("kg-liste");
+  const balken = $("balken");
+  const zeilen = {};
+  const segmente = {};
+  const PFEIL = '<svg class="pfeil" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 3l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const reihen = [100, 200, 300, 400, 500, 600, 700, "risiko", 800];
+
+  reihen.forEach((n, idx) => {
+    const isRisiko = n === "risiko";
+    const farbe = isRisiko ? "" : `background:var(--kg${(n / 100)})`;
+    const d = document.createElement("details");
+    d.className = "kg";
+    d.dataset.kg = n;
+    d.innerHTML = `<summary>
+        <span class="swatch ${isRisiko ? "risiko-muster" : ""}" style="${farbe}"></span>
+        <span class="kg-nr">${isRisiko ? "Res." : "KG " + n}</span>
+        <span class="kg-name">${isRisiko ? "Risikobetrag" : KG_NAMEN[n]}</span>
+        <span class="kg-betrag"></span>
+        <span class="kg-anteil"></span>
+        ${PFEIL}
+      </summary><ul></ul>`;
+    liste.appendChild(d);
+    zeilen[n] = d;
+
+    const seg = document.createElement("div");
+    seg.dataset.kg = n;
+    if (isRisiko) seg.className = "risiko-muster"; else seg.style.background = `var(--kg${n / 100})`;
+    balken.appendChild(seg);
+    segmente[n] = seg;
+  });
+
+  const tip = $("tip");
+  function hervorheben(n, ev) {
+    balken.classList.toggle("hover", n != null);
+    for (const k in segmente) {
+      segmente[k].classList.toggle("aktiv", String(k) === String(n));
+      zeilen[k].classList.toggle("aktiv", String(k) === String(n));
+    }
+    if (n == null || !ev) { tip.hidden = true; return; }
+    const seg = segmente[n];
+    tip.innerHTML = `<span>${seg.dataset.titel}</span><b>${seg.dataset.betrag} · ${seg.dataset.anteil}</b>`;
+    tip.hidden = false;
+    const x = Math.min(ev.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+    tip.style.left = Math.max(8, x) + "px";
+    tip.style.top = (ev.clientY - tip.offsetHeight - 12) + "px";
+  }
+  balken.addEventListener("pointermove", (e) => {
+    const t = e.target.closest("[data-kg]");
+    hervorheben(t ? t.dataset.kg : null, e);
+  });
+  balken.addEventListener("pointerleave", () => hervorheben(null));
+  liste.addEventListener("pointerover", (e) => {
+    const d = e.target.closest(".kg");
+    if (d) hervorheben(d.dataset.kg);
+  });
+  liste.addEventListener("pointerleave", () => hervorheben(null));
+
+  // ---------- Ausgabe ----------
+  function zeigen() {
+    const s = lesen();
+    const r = berechne(s);
+    const werte = {};
+    reihen.forEach((n) => { werte[n] = n === "risiko" ? r.risiko : sum(r.kg[n]); });
+
+    reihen.forEach((n) => {
+      const d = zeilen[n];
+      const v = werte[n];
+      const anteil = r.gesamt > 0 ? v / r.gesamt * 100 : 0;
+      d.querySelector(".kg-betrag").textContent = eur.format(v);
+      d.querySelector(".kg-anteil").textContent = pct.format(anteil) + " %";
+      const items = n === "risiko"
+        ? [[`${zahl.format(s.puffer)} % auf KG 200–700 für Unvorhergesehenes`, r.risiko]]
+        : r.kg[n];
+      d.querySelector("ul").innerHTML = items.map(([l, b]) => `<li><span>${l}</span><span>${eur.format(b)}</span></li>`).join("");
+
+      const seg = segmente[n];
+      seg.style.flexGrow = v;
+      seg.style.flexBasis = "0";
+      seg.hidden = v <= 0;
+      seg.dataset.titel = n === "risiko" ? "Risikobetrag" : `KG ${n} · ${KG_NAMEN[n]}`;
+      seg.dataset.betrag = eur.format(v);
+      seg.dataset.anteil = pct.format(anteil) + " %";
+    });
+    // abgerundete Enden nur an sichtbaren Rand-Segmenten
+    const sichtbar = reihen.filter((n) => !segmente[n].hidden);
+    reihen.forEach((n) => { segmente[n].style.borderRadius = "0"; });
+    if (sichtbar.length) {
+      segmente[sichtbar[0]].style.borderTopLeftRadius = segmente[sichtbar[0]].style.borderBottomLeftRadius = "4px";
+      const last = segmente[sichtbar[sichtbar.length - 1]];
+      last.style.borderTopRightRadius = last.style.borderBottomRightRadius = "4px";
+    }
+    // Reihenfolge im Balken: KG 100..700, Risiko, 800 (wie Liste)
+    balken.setAttribute("aria-label", "Anteile: " + reihen.map((n) => `${segmente[n].dataset.titel} ${segmente[n].dataset.anteil}`).join(", "));
+
+    $("gesamt").textContent = eur.format(r.gesamt);
+    $("k-bau-m2").textContent = r.wf > 0 ? eur.format(r.kg34 / r.wf) : "–";
+    $("k-ges-m2").textContent = r.wf > 0 ? eur.format(r.gesamt / r.wf) : "–";
+
+    $("f-ek").textContent = eur.format(s.ek);
+    $("f-darlehen").textContent = eur.format(r.darlehen);
+    $("f-rate").textContent = eur.format(r.rate);
+    $("f-rest-label").textContent = `Restschuld nach ${s.bindung} Jahren`;
+    $("f-rest").textContent = eur.format(r.rest);
+    $("f-dauer").textContent = r.darlehen === 0 ? "sofort"
+      : Number.isFinite(r.laufzeit) ? `${zahl.format(Math.ceil(r.laufzeit / 12 * 10) / 10)} Jahren`
+      : "nie (Tilgung zu niedrig)";
+
+    let st;
+    if (r.darlehen === 0) st = ["good", "Kein Darlehen nötig"];
+    else if (r.ekQuote >= 0.2) st = ["good", `Eigenkapital ${pct.format(r.ekQuote * 100)} % · solide`];
+    else if (r.ekQuote >= 0.1) st = ["warn", `Eigenkapital ${pct.format(r.ekQuote * 100)} % · knapp`];
+    else st = ["crit", `Eigenkapital ${pct.format(r.ekQuote * 100)} % · sehr niedrig`];
+    const ICON = {
+      good: '<path d="M2.5 6.5l2.3 2.3L9.5 3.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+      warn: '<path d="M6 2.2v4.6M6 9.2v.4" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
+      crit: '<path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/>'
+    };
+    $("ek-status").innerHTML = `<span class="status ${st[0]}"><svg viewBox="0 0 12 12" aria-hidden="true">${ICON[st[0]]}</svg>${st[1]}</span>`;
+
+    const [lname, lgrest, lregio] = LAENDER[s.land];
+    $("land-hinweis").textContent = `Grunderwerbsteuer ${zahl.format(lgrest)} % · Regionalfaktor ${zahl.format(lregio)}`;
+    $("sf-projekt").textContent = `${HAUS[s.haus].n}, ${zahl.format(s.wf)} m² Wfl.`;
+    $("sf-ort").textContent = lname;
+
+    $("l-gesamt").textContent = eur.format(r.gesamt);
+    $("l-rate").textContent = `Rate ${eur.format(r.rate)} / Monat`;
+
+    // Felder abhängig vom Grundstück
+    ["brw", "makler"].forEach((k) => { form.elements[k].disabled = s.vorhanden; });
+    form.elements.brw.closest(".feld").style.opacity = s.vorhanden ? 0.5 : 1;
+    form.elements.makler.closest(".feld").style.opacity = s.vorhanden ? 0.5 : 1;
+
+    try { localStorage.setItem(SPEICHER, JSON.stringify(s)); } catch (e) { /* Speicher nicht verfügbar */ }
+  }
+
+  // Annahmen-Tabelle
+  $("annahmen-laender").innerHTML = Object.values(LAENDER)
+    .map(([n, g, r]) => `<tr><td>${n}</td><td class="num">${zahl.format(g)} %</td><td class="num">${zahl.format(r)}</td></tr>`).join("");
+
+  $("sf-stand").textContent = new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date());
+
+  let start = BEISPIEL;
+  try {
+    const gespeichert = JSON.parse(localStorage.getItem(SPEICHER) || "null");
+    if (gespeichert && typeof gespeichert === "object") start = Object.assign({}, BEISPIEL, gespeichert);
+  } catch (e) { /* ignorieren */ }
+  schreiben(start);
+  zeigen();
+
+  form.addEventListener("input", zeigen);
+  form.addEventListener("change", zeigen);
+  form.addEventListener("submit", (e) => e.preventDefault());
+  $("reset").addEventListener("click", () => { schreiben(BEISPIEL); zeigen(); });
+})();
+</script>
+</body>
+</html>
